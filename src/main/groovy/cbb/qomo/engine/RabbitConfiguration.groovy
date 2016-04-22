@@ -9,11 +9,15 @@ import org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter
 import org.springframework.amqp.support.converter.DefaultClassMapper
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter
 import org.springframework.amqp.support.converter.MessageConverter
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 @Configuration
 class RabbitConfiguration {
+
+    @Value('${app.queue.name}')
+    String queueName
 
     @Bean
     MessageConverter messageConverter() {
@@ -27,7 +31,7 @@ class RabbitConfiguration {
 
     @Bean
     Queue queue() {
-        return new Queue("qomo_development.jobs", true, false, false)
+        return new Queue(queueName, true, false, false)
     }
 
     @Bean
@@ -35,7 +39,7 @@ class RabbitConfiguration {
                                              MessageListenerAdapter listenerAdapter) {
         SimpleMessageListenerContainer container = new SimpleMessageListenerContainer()
         container.setConnectionFactory(connectionFactory)
-        container.setQueueNames('qomo_development.jobs')
+        container.setQueueNames(queueName)
         container.setMessageListener(listenerAdapter)
         return container
     }

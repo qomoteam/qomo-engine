@@ -4,3 +4,5 @@ spring.rabbitmq.addresses=
 spring.rabbitmq.username=
 spring.rabbitmq.password=
 spring.rabbitmq.virtual-host=
+
+app.queue.name=
