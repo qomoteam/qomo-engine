@@ -38,11 +38,20 @@ class JobService {
         def envp = unit.env.entrySet().collect {
             it.key + '=' + it.value
         }
-        def process = ['sh','-c', "cd ${unit.wd};${unit.command}"].execute(envp, new File(unit.wd))
+        def process = ['sh','-c', parseCmd(unit)].execute(envp, new File(unit.wd))
         LogAppender logAppender = new LogAppender(this, unit)
         process.waitForProcessOutput(logAppender, logAppender)
         return process.exitValue()
     }
+
+
+    String parseCmd(JobUnit unit) {
+        def cmd = unit.command
+        // Replace $ to \$
+        cmd.replaceAll('\\$', '\\\\\\$')
+        return "cd ${unit.wd};${unit.command}"
+    }
+
 
     public void updateStatus(JobUnit unit, Status status) {
         unit.status = status
