@@ -3,10 +3,13 @@ package cbb.qomo.engine.service
 import cbb.qomo.engine.Status
 import cbb.qomo.engine.model.Job
 import cbb.qomo.engine.model.JobUnit
+import groovy.util.logging.Slf4j
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Service
 
+
+@Slf4j
 @Service
 class JobService {
 
@@ -14,7 +17,7 @@ class JobService {
     NamedParameterJdbcTemplate jdbcTemplate
 
     void run(Job job) {
-        job.units.each { unit ->
+        for (JobUnit unit : job.units) {
             try {
                 updateStatus(unit, Status.RUNNING)
                 int exitValue = runJobUnit(unit)
@@ -23,13 +26,19 @@ class JobService {
                 StringWriter sw = new StringWriter()
                 e.printStackTrace(new PrintWriter(sw))
                 unit.log += sw.toString()
+                saveJobUnitLog(unit)
                 updateStatus(unit, Status.FAIL)
+                break
             }
         }
     }
 
     private int runJobUnit(JobUnit unit) {
-        def process = ['sh','-c', unit.command].execute()
+        log.info("Run command [${unit.command}], with working dir [${unit.wd}]")
+        def envp = unit.env.entrySet().collect {
+            it.key + '=' + it.value
+        }
+        def process = ['sh','-c', "cd ${unit.wd};${unit.command}"].execute(envp, new File(unit.wd))
         LogAppender logAppender = new LogAppender(this, unit)
         process.waitForProcessOutput(logAppender, logAppender)
         return process.exitValue()
