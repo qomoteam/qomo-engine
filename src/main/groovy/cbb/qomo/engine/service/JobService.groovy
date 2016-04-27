@@ -48,7 +48,7 @@ class JobService {
     String parseCmd(JobUnit unit) {
         def cmd = unit.command
         // Replace $ to \$
-        cmd.replaceAll('\\$', '\\\\\\$')
+        cmd = cmd.replaceAll('\\$', '\\\\\\$')
         return "cd ${unit.wd};${cmd}"
     }
 
