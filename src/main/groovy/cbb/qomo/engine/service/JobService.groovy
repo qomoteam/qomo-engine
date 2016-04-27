@@ -49,7 +49,7 @@ class JobService {
         def cmd = unit.command
         // Replace $ to \$
         cmd.replaceAll('\\$', '\\\\\\$')
-        return "cd ${unit.wd};${unit.command}"
+        return "cd ${unit.wd};${cmd}"
     }
 
 

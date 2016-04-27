@@ -6,3 +6,4 @@ spring.rabbitmq.password=
 spring.rabbitmq.virtual-host=
 
 app.queue.name=
+spring.rabbitmq.listener.concurrency=
