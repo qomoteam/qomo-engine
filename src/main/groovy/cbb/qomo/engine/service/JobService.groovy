@@ -4,10 +4,12 @@ import cbb.qomo.engine.Status
 import cbb.qomo.engine.model.Job
 import cbb.qomo.engine.model.JobUnit
 import groovy.util.logging.Slf4j
+import org.springframework.amqp.core.MessageBuilder
+import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate
 import org.springframework.stereotype.Service
-
 
 @Slf4j
 @Service
@@ -15,6 +17,15 @@ class JobService {
 
     @Autowired
     NamedParameterJdbcTemplate jdbcTemplate
+
+    @Autowired
+    RabbitTemplate rabbitTemplate
+
+    String statusQueueName
+
+    JobService(@Value('${app.queue.name}') String queueName) {
+        statusQueueName = queueName+'.status'
+    }
 
     void run(Job job) {
         for (JobUnit unit : job.units) {
@@ -30,7 +41,13 @@ class JobService {
                 updateStatus(unit, Status.FAIL)
                 break
             }
+            rabbitTemplate.send(statusQueueName,
+                 MessageBuilder.withBody(unit.id.toString().getBytes())
+                      .setContentType('text/plain')
+                      .build()
+            );
         }
+
     }
 
     private int runJobUnit(JobUnit unit) {

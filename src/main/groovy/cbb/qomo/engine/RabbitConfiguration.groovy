@@ -30,8 +30,13 @@ class RabbitConfiguration {
     }
 
     @Bean
-    Queue queue() {
+    Queue queueJob() {
         return new Queue(queueName, true, false, false)
+    }
+
+    @Bean
+    Queue queueStatus() {
+        return new Queue(queueName+'.status', true, false, false)
     }
 
     @Bean
