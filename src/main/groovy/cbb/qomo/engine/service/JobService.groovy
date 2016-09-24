@@ -3,7 +3,9 @@ package cbb.qomo.engine.service
 import cbb.qomo.engine.Status
 import cbb.qomo.engine.model.Job
 import cbb.qomo.engine.model.JobUnit
+import groovy.json.JsonBuilder
 import groovy.util.logging.Slf4j
+import org.postgresql.util.PGobject
 import org.springframework.amqp.core.MessageBuilder
 import org.springframework.amqp.rabbit.core.RabbitTemplate
 import org.springframework.beans.factory.annotation.Autowired
@@ -21,10 +23,13 @@ class JobService {
     @Autowired
     RabbitTemplate rabbitTemplate
 
+    @Autowired
+    DockerService dockerService
+
     String statusQueueName
 
     JobService(@Value('${app.queue.name}') String queueName) {
-        statusQueueName = queueName+'.status'
+        statusQueueName = queueName + '.status'
     }
 
     void run(Job job) {
@@ -41,34 +46,23 @@ class JobService {
                 updateStatus(unit, Status.FAIL)
                 break
             }
-            rabbitTemplate.send(statusQueueName,
-                 MessageBuilder.withBody(unit.id.toString().getBytes())
-                      .setContentType('text/plain')
-                      .build()
-            );
         }
 
+    }
+
+    void notifyStatusChange(JobUnit unit) {
+        rabbitTemplate.send(
+             statusQueueName,
+             MessageBuilder.withBody(unit.id.toString().getBytes())
+                  .setContentType('text/plain')
+                  .build()
+        )
     }
 
     private int runJobUnit(JobUnit unit) {
-        log.info("Run command [${unit.command}], with working dir [${unit.wd}]")
-        def envp = unit.env.entrySet().collect {
-            it.key + '=' + it.value
-        }
-        def process = ['sh','-c', parseCmd(unit)].execute(envp, new File(unit.wd))
-        LogAppender logAppender = new LogAppender(this, unit)
-        process.waitForProcessOutput(logAppender, logAppender)
-        return process.exitValue()
+        def exitCode = dockerService.runCommand(this, unit, unit.command, unit.wd, unit.env)
+        return exitCode
     }
-
-
-    String parseCmd(JobUnit unit) {
-        def cmd = unit.command
-        // Replace $ to \$
-        cmd = cmd.replaceAll('\\$', '\\\\\\$')
-        return "cd ${unit.wd};${cmd}"
-    }
-
 
     public void updateStatus(JobUnit unit, Status status) {
         unit.status = status
@@ -91,7 +85,7 @@ class JobService {
                      [
                           status    : unit.status.ordinal(),
                           id        : unit.id,
-                          ended_at: new Date(),
+                          ended_at  : new Date(),
                           updated_at: new Date()
                      ]
                 )
@@ -106,6 +100,7 @@ class JobService {
                      ]
                 )
         }
+        notifyStatusChange(unit)
     }
 
     void saveJobUnitLog(JobUnit jobUnit) {
@@ -119,5 +114,20 @@ class JobService {
         )
     }
 
-
+    def saveJobUnitDockerContainerId(JobUnit jobUnit, String dockerHost, String dcid) {
+        def docker = new PGobject();
+        docker.setValue(new JsonBuilder([
+             cid : dcid,
+             host: dockerHost
+        ]).toString())
+        docker.setType('json')
+        jdbcTemplate.update(
+             'UPDATE job_units SET docker=:docker, updated_at=:updated_at WHERE id=:id',
+             [
+                  docker    : docker,
+                  id        : jobUnit.id,
+                  updated_at: new Date()
+             ]
+        )
+    }
 }

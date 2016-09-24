@@ -30,13 +30,19 @@ repositories {
 	mavenCentral()
 }
 
+configurations {
+    all*.exclude group: 'org.codehaus.groovy', module: 'groovy'
+}
 
 dependencies {
 	compile('org.springframework.boot:spring-boot-starter-actuator')
 	compile('org.springframework.boot:spring-boot-starter-amqp')
 	compile('org.springframework.boot:spring-boot-starter-jdbc')
-	compile('org.codehaus.groovy:groovy')
-	runtime('org.postgresql:postgresql')
+	compile('org.codehaus.groovy:groovy-all:2.4.7')
+
+	compile('com.github.docker-java:docker-java:3.0.3')
+
+    compile('org.postgresql:postgresql')
 	testCompile('org.springframework.boot:spring-boot-starter-test') 
 }
 
