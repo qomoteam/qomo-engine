@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service
 class DockerService {
 
     int runCommand(JobService jobService, JobUnit jobUnit, String command, String wd, Map<String, String> env) {
-        def script = new File('/mapr/qomo.cbb/qomo_production/tmp', "script-${jobUnit.id}.sh")
+        def script = new File('/mapr/qomo.cbb/qomo_production/tmp/script', "${jobUnit.id}.sh")
 
         script.withWriter { w ->
             env.each { e ->
