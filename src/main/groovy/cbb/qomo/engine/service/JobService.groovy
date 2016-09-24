@@ -60,8 +60,15 @@ class JobService {
     }
 
     private int runJobUnit(JobUnit unit) {
-        def exitCode = dockerService.runCommand(this, unit, unit.command, unit.wd, unit.env)
+        def exitCode = dockerService.runCommand(this, unit, parseCmd(unit.command), unit.wd, unit.env)
         return exitCode
+    }
+
+    String parseCmd(String cmd) {
+        // Escape special character for Bash
+        // Replace $ to \$
+        cmd = cmd.replaceAll('\\$', '\\\\\\$')
+        return cmd
     }
 
     public void updateStatus(JobUnit unit, Status status) {

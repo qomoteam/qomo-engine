@@ -17,41 +17,37 @@ class DockerService {
 
     int runCommand(JobService jobService, JobUnit jobUnit, String command, String wd, Map<String, String> env) {
         def script = new File('/mapr/qomo.cbb/qomo_production/tmp', "script-${jobUnit.id}.sh")
-        try {
-            script.deleteOnExit()
-            script.withWriter { w ->
-                env.each { e ->
-                    w.write("${e.key}=${e.value}\n")
-                }
-                w.write("cd ${wd}\n")
-                w.write(command)
-                w.write("\n")
+
+        script.withWriter { w ->
+            env.each { e ->
+                w.write("${e.key}=${e.value}\n")
             }
-
-            log.info("==> Script of job unit ${jobUnit.id}: ${script.absolutePath}")
-
-            def docker = DockerClientBuilder.getInstance(dockerClient).build()
-
-            def containerCmd = docker.createContainerCmd('qomo/runner')
-                 .withName("qomo_runner_${jobUnit.id}")
-                 .withTty(true)
-                 .withDns('192.168.118.212').withDnsSearch('cbb')
-            bindVolumes(containerCmd, script)
-            def container = containerCmd.exec()
-            log.info("Docker container ID: ${container.id}")
-
-            jobService.saveJobUnitDockerContainerId(jobUnit, 'tcp://192.168.118.212:2375', container.id)
-
-            docker.startContainerCmd(container.id).exec()
-
-            def exitCode = docker.waitContainerCmd(container.id).exec(new WaitContainerResultCallback()).awaitStatusCode()
-
-            log.info("Job unit ${jobUnit.id} end")
-
-            return exitCode
-        } finally {
-            //script.delete()
+            w.write("cd ${wd}\n")
+            w.write(command)
+            w.write("\n")
         }
+
+        log.info("==> Script of job unit ${jobUnit.id}: ${script.absolutePath}")
+
+        def docker = DockerClientBuilder.getInstance(dockerClient).build()
+
+        def containerCmd = docker.createContainerCmd('qomo/runner')
+             .withName("qomo_runner_${jobUnit.id}")
+             .withTty(true)
+             .withDns('192.168.118.212').withDnsSearch('cbb')
+        bindVolumes(containerCmd, script)
+        def container = containerCmd.exec()
+        log.info("Docker container ID: ${container.id}")
+
+        jobService.saveJobUnitDockerContainerId(jobUnit, 'tcp://192.168.118.212:2375', container.id)
+
+        docker.startContainerCmd(container.id).exec()
+
+        def exitCode = docker.waitContainerCmd(container.id).exec(new WaitContainerResultCallback()).awaitStatusCode()
+
+        log.info("Job unit ${jobUnit.id} end")
+
+        return exitCode
     }
 
     def getDockerClient() {
