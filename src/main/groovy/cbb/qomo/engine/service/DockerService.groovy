@@ -22,7 +22,7 @@ class DockerService {
             env.each { e ->
                 w.write("${e.key}=${e.value}\n")
             }
-            w.write("PATH=\$PATH:$wd")
+            w.write("PATH=\$PATH:$wd\n")
             w.write("cd ${wd}\n")
             w.write(command)
             w.write("\n")
